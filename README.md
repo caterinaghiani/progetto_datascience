@@ -19,6 +19,11 @@ Feature aggiunta: `UTILIZATION_RATIO` utilizzo del credito in %
 *Risultato migliore* ottenuto con random forest, per la recall più alta, utile a minimizzare i falsi negativi. 
 
 
+## Nota sull'uso di strumenti AI:
+- Claude è stato utilizzato come supporto per la scrittura formale in LaTeX del report (sintassi, formattazione di tabelle, inserimento figure e bibliografia)
+- Google Gemini è stato utilizzato per assistere la formulazione linguistica e stilistica del testo.
+L'analisi dei dati, le scelte metodologiche, l'interpretazione dei risultati e le conclusioni sono opera dell'autrice.
+
 
 
 
