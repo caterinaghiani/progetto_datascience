@@ -1,0 +1,286 @@
+\documentclass{article}
+\usepackage{graphicx}% Required for inserting images
+\usepackage{float}
+\usepackage{amsmath}
+\usepackage{booktabs}
+\usepackage{hyperref}
+
+\begin{document}
+\begin{titlepage}
+    \centering
+
+    \vspace{2cm}
+
+    {\Huge\bfseries Relazione finale progetto\par}
+
+    \vspace{0.5cm}
+
+    {\Large Analisi del rischio di default \par}
+
+    \vspace{2cm}
+    
+    {\Large 
+    \href{https://github.com/caterinaghiani/progetto_datascience}{\textbf{Repository GitHub}}
+    \par}
+
+    \vspace{1.5cm}
+
+    {\large
+    Caterina Ghiani - 1181102
+    }
+
+    \vfill
+
+    {\large Anno Accademico 2025/2026 \par}
+\end{titlepage}
+
+
+\thispagestyle{empty}
+\newpage
+\tableofcontents
+\thispagestyle{empty}
+\newpage
+
+\setcounter{page}{1}
+\section{Introduzione}
+\textbf{Domanda di ricerca} -- \`E possibile prevedere se un cliente andr\`a in default sul pagamento del mese successivo ($Y=1$) analizzando il suo profilo demografico, il limite di credito concesso, lo storico dei pagamenti e l'ammontare degli estratti conto passati?
+\\
+Per le banche, la valutazione del rischio di credito dei propri clienti \`e fondamentale: essa consente di identificare in anticipo i clienti a rischio di insolvenza, riducendo di conseguenza le perdite. Individuare pattern di comportamento ricorrenti permette inoltre di delineare il profilo dei soggetti potenzialmente meno affidabili.
+\\
+La relazione descrive l'intero processo di analisi condotto, articolato in tre fasi: 
+\begin{itemize}
+    \item analisi esplorativa univariata e bivariata 
+    \item modellazione
+    \item confronto della performance dei modelli
+\end{itemize}
+
+\section{Dataset}
+
+Il dataset proviene da una banca, la quale ha fornito informazioni riguardo i titolari di carte di credito per prevedere se il cliente e titolare della carta, pagher\`a o meno il suo prossimo accredito. Per poter condurre tale previsione, il dataset contiene informazioni sulle caratteristiche anagrafiche dei clienti quali ad esempio, genere e et\`a, ma anche il limite di credito, lo storico dei pagamenti e i comportamenti assunti in precedenza. 
+\\
+\subsection{Descrizione delle variabili}
+Il dataset ha 30.000 osservazioni: si riferisce a ben 30.000 individui e ha 24 features. Non sono stati trovati dati mancanti.
+Rispettivamente le variabili contengono:
+\begin{itemize}
+    \item \textbf{LIMIT\_BAL} (numerica discreta) -- \`e l'importo del credito concesso (in dollari) e include sia il credito al consumo individuale sia quello familiare (supplementare)
+    \item \textbf{SEX} (booleana) -- il genere del titolare, che assume valore pari a 0 per i maschi e 1 per le femmine
+    \item \textbf{EDUCATION} (categoriale ordinale) -- l'istruzione del titolare: 1 = specialistica/master/dottorato, 2 = universit\`a, 3 = scuola superiore e 4 = altro
+    \item \textbf{MARRIAGE} (categoriale nominale) -- lo stato civile del titolare: 1 = sposato/a, 2 = single e 3 = altro
+    \item \textbf{AGE} (numerica discreta) -- l'et\`a del titolare espressa in anni
+    \item \textbf{PAY\_X} (categoriale ordinale) -- \`e lo stato del rimborso a settembre (\texttt{PAY\_1}) fino a \texttt{PAY\_6}, che \`e lo stato del rimborso ad aprile; la scala di misurazione dello stato del rimborso \`e: $-1$ e $0$ pagamento regolare, $1$ in ritardo di un mese, fino a $9$ in ritardo di nove o pi\`u mesi
+    \item \textbf{BILL\_AMT} (numerica discreta) -- \`e l'importo dell'estratto conto a settembre (\texttt{BILL\_AMT1}), fino a \texttt{BILL\_AMT6}, che \`e l'importo dell'estratto conto ad aprile
+    \item \textbf{PAY\_AMT} (numerica discreta) -- \`e l'importo del pagamento precedente, in questo caso l'importo pagato a settembre (\texttt{PAY\_AMT1}), fino a \texttt{PAY\_AMT6}, che \`e l'importo pagato ad aprile
+    \item \textbf{default payment} (booleana, variabile target) -- \`e pari a 1 se il titolare ha fatto default e 0 se ha pagato
+\end{itemize}
+
+\section{Metodologia}
+
+\textbf{Pulizia dei dati}: \`e stato necessario rinominare la variabile \textit{PAY\_0} in \textit{PAY\_1} per garantire la sequenzialit\`a temporale con i mesi successivi. Per coerenza sono stati accorpati in una classe unica $0$ ("Nessun ritardo") i valori negativi presenti nella variabile \textit{PAY\_N}, riservando i valori interi positivi ($1, 2, \dots$) ai mesi effettivi di ritardo nei pagamenti.\\
+\textbf{Gestione assenza dati e outlier}: in assenza di valori nulli ($30.000$ osservazioni complete), si \`e deciso di mantenere gli outlier finanziari per preservare i casi estremi di rischio effettivo.\\
+\textbf{Preparazione dei dati e Feature Engineering}:utilizzando \textit{StandardScaler}, sono state standardizate le variabili numeriche per portarle a media 0 e deviazione standard 1, per k-NN e regressione logistica. \`E stata creata la variabile \textit{UTILIZATION\_RATIO} $= (\text{BILL\_AMT1} / \text{LIMIT\_BAL}) \times 100$ per misurare la percentuale di saturazione del tetto di spesa ed eliminare la distorsione di scala dei debiti assoluti.
+  
+
+\subsection{Modelli Utilizzati}
+\begin{itemize}
+    \item \textbf{Regressione Logistica}: ci permette di analizzare la curva sigmoide e capire come l'aggiustamento della soglia decisionale aiuti a gestire il rischio di default.
+    \item \textbf{k-Nearest Neighbors (k-NN)}: modello non parametrico che classifica i clienti in base alla vicinanza ai loro $k$ profili pi\'u simili nello spazio delle feature.
+    \item \textbf{Random Forest}: modello \textit{ensemble} basato su 200 alberi decisionali. Addestrato sui dati originali (non scalati), \`e ideale per comprendere relazioni non lineari e per estrarre la \textit{feature importance}.
+\end{itemize}
+
+\subsection{Validazione e Partitioning}
+\begin{itemize}
+    \item \textbf{Train/Test Split}: suddivisione 80/20 del dataset ($24.000$ clienti per il training e $6.000$ per il test).
+    \item \textbf{Stratificazione}: utilizzata l'opzione \textit{stratify=y} per conservare la proporzione originale dei default (approssimativamente $22.1\%$) sia nell'addestramento che nella verifica.
+    \item \textbf{Prevenzione Data Leakage}: lo \textit{StandardScaler} \`e stato calibrato (\textit{fit\_transform}) solo sui dati di train ed esteso (\textit{transform}) al test set.
+\end{itemize}
+
+
+\section{Risultati}
+\subsection{Risultati dell'analisi esplorativa}
+\subsubsection{Analisi univariata}
+\begin{enumerate}
+    \item \textbf{Distribuzione della variabile target $Y$}, i 3/4 dei soggetti osservati \`e solvibile, mentre 1/4 \`e in default. Questo indica che il nostro dataset non \`e bilanciato rispetto alla variabile target
+    \begin{table}[htbp]
+    \centering
+    \begin{tabular}{ccc}
+    \toprule
+    \textbf{} & \textbf{Conteggio (N)} & \textbf{Percentuale (\%)} \\
+    \midrule
+    \textbf{Solvibile (0)} & 23364 & 77.88 \\
+    \textbf{Default (1)} & 6636 & 22.12 \\
+    \bottomrule
+    \end{tabular}
+    \caption{distribuzione della variabile target $Y$}
+    \label{tab:mia_tabella}
+    \end{table}
+
+    \item \textbf{Caratteristiche anagrafiche dei nostri soggetti}: il 60\% del nostro campione \`e composto da soggetti di genere femminile. Circa la met\`a delle persone ha ricevuto un'educazione universitaria e il 35\% del campione ha continuato gli studi dopo l'universit\`a. Inoltre, rispetto alla situazione sentimentale, ci troviamo davanti ad un campione in cui poco pi\`u della met\`a dei soggetti \`e single e l'altra met\`a \`e sposata (l'1\% non ha voluto dichiararlo o non si identifica in nessuna delle categorie). L'et\`a dei soggetti \`e compresa tra i $21$ e i $79$ anni, ma 3/4 dei soggetti hanno meno di 41 anni. La media \`e di 35 anni, questo vuol dire che probabilmente il valore 79 rappresenta un outlier.
+
+    \item \textbf{Distribuzione del limite di credito accordato}: la media del credito \`e di 167.484,32 dollari, con una forte deviazione standard. La mediana \`e inferiore alla media, evidenziando una distribuzione asimmetrica a destra. Difatti, pochi clienti hanno crediti molto elevati e lo possiamo notare anche dal massimo del credito concesso, che \`e pari a 1 milione.
+
+    \item \textbf{Analisi dello storico dei pagamenti}: calcolando la distribuzione percentuale dei mesi di ritardo ricostruendo lo storico dei pagamenti, individuiamo che circa l'80\% dei soggetti \`e in pari con i pagamenti della propria carta di credito, con un picco del 90\% nel mese di aprile. Si nota anche che i soggetti in ritardo sono solitamente in ritardo di 2 mesi nei pagamenti da effettuare. 
+
+    \item \textbf{Importo delle bollette mensili}: la media dell'importo delle bollette aumenta man mano che si progredisce nell'anno e in tutti i mesi la media \`e pi\`u del doppio della mediana. Il 50\% dei clienti ha bollette contenute e approssimativamente degli stessi importi, mentre pochi clienti accumulano saldi estremamente elevati. I valori negativi non indicano un errore ma implicano un credito a favore del cliente.
+    
+\end{enumerate}
+
+\subsubsection{Analisi bivariata}
+\begin{enumerate}
+    \item \textbf{L'et\`a differisce in modo significativo tra clienti in default e clienti solvibili?}\\ Si rileva una mediana pari a circa $34$ anni, con un range interquartile compreso tra 28 e 41 anni. La presenza di valori anomali statistici sopra i 60 anni rispecchia quanto visto nell'analisi univariata in cui pochi soggetti hanno un'et\`a avanzata ma non costituiscono un errore, piuttosto rappresentano una situazione realistica. 
+    La quasi totale somiglianza tra i due boxplot, suggerisce che l'et\`a , non \`e un fattore che influisce sulla variabile target.
+    \begin{figure}[H]
+    \centering
+    \includegraphics[width=1.1\linewidth]{boxplot_age_target.png}
+    \caption{Distribuzione dell'et\`a rispetto alla variabile target $Y$}
+    \label{fig:placeholder1}
+    \end{figure}
+
+    \item \textbf{Un elevato tasso d'istruzione si associa ad una minore probabilit\`a di default?}\\
+    Al diminuire del grado del titolo di studio aumenta il tasso di default: ad un'istruzione pi\`u elevata si associa una maggiore probabilit\`a di solvibilit\`a supponendo che sia legata ad un reddito medio pi\`u stabile.
+    I clienti codificati come \textit{``Altro''} includono anche le anomalie che sono state accorpate e registrano un tasso di default estremamente basso (7.1\%). Questo potrebbe essere dovuto al fatto che corrispondano a categorie particolari, probabilmente a categorie di soggetti sui quali la stessa banca fa uno screening pi\`u approfondito per verificarne l'affidabilit\`a.
+    \begin{figure}[H]
+    \centering
+    \includegraphics[width=1.1\linewidth]{education_stacked_breakdown.png}
+    \caption{Ripartizione percentuale di solvibili e insolventi per titolo di studio}
+    \label{fig:placeholder2}
+    \end{figure}
+
+    \item \textbf{Esiste una differenza in base al genere che rende i soggetti pi\`u o meno probabili di essere in default?}\\
+    Calcolando il tasso medio di default per genere possiamo confrontare le percentuali normalizzate: le donne hanno un tasso di insolvenza inferiore rispetto agli uomini (20.85\% donne e 24.17\% uomini) quindi le donne sono pi\`u affidabili degli uomini. A causa della sproporzione nel portafoglio clienti (le donne sono il 60\%), in valore assoluto le donne superano gli uomini nei casi di default. 
+    \begin{table}[H]
+    \centering
+    \begin{tabular}{lccccc}
+    \toprule
+    \textbf{Genere} & \textbf{Solvibili (N)} & \textbf{Solvibili (\%)} & \textbf{Default (N)} & \textbf{Default (\%)}  \\
+    \midrule
+    Maschio (0) & 9015  & 75.83 & 2873 & 24.17  \\
+    Femmina (1) & 14349 & 79.22 & 3763 & 20.78  \\
+    \bottomrule
+    \end{tabular}
+    \caption{Distribuzione del default per genere (valori assoluti e percentuali)}
+    \label{tab:default_genere}
+    \end{table}
+
+    \item \textbf{Un soggetto sposato \`e pi\`u probabile che sia solvibile?} \\
+    le categorie ``sposato/a" e ``single" sono approssimativamente bilanciate avendo rispettivamente $13.659$ e $15.964$ soggetti osservati. Questo bilanciamento lo notiamo anche nella distribuzione delle due categorie rispetto alla variabile target. Possiamo dire che tra la variabile target e lo stato civile non vi \`e una forte correlazione.
+
+    \item \textbf{Un limite di credito concesso pi\`u basso segnala un soggetto pi\`u a rischio di default?}\\
+    Il grafico mostra una tendenza decrescente: all'aumentare del credito accordato, la percentuale di clienti in default si riduce in modo costante.
+    \begin{itemize}
+        \item \textit{Fascia ad alto rischio ($<$ 50k)} in cui i clienti hanno un tasso di default pi\`u alto di tutti: quasi 1 cliente su 3 in questa fascia va in default;
+        \item \textit{Fascia intermedia (50k - 300k)} il rischio di default diminuisce progressivamente dal 25.8\% al 16.1\%;
+        \item \textit{Fascia a basso rischio ($>$ 300k)} questi clienti a cui la banca d\`a molta fiducia, effettivamente hanno una percentuale bassa di default, di 2.4 volte pi\`u affidabili della prima fascia. Le banche tendenzialmente verificano in modo approfondito l'affidabilit\`a di clienti prima di concedere limiti di credito cos\'i alti.
+    \end{itemize}
+    
+    \begin{figure}[H]
+    \centering
+    \includegraphics[width=1.1\linewidth]{limit_bal_fasce_numerosita.png}
+    \caption{Tasso di default per fascia di limite di credito}
+    \label{fig:placeholder3}
+    \end{figure}
+
+    \item \textbf{Un elevato rapporto tra spesa mensile e credito concesso aumenta la probabilit\`a di default? } \\
+    Dal rapporto dell'ultimo estratto conto (BILL\_AMT1) e il limite di credito (LIMIT\_BAL) guardiamo il debito in rapporto alla capacit\`a di ripagarlo. I soggetti finanziariamente pi\`u vulnerabili sono coloro che lavorando costantemente a ridosso del tetto massimo di spesa, non dispongono di alcun cuscinetto di liquidit\`a residua. Di conseguenza, di fronte a un piccolo imprevisto o a un'emergenza, la loro probabilit\`a di andare in default aumenta notevolmente.
+    
+    \begin{figure}[H]
+    \centering
+    \includegraphics[width=1.1\linewidth]{credit_utilization_rates.png}
+    \caption{Tasso di default per fascia di limite di utilizzo del credito}
+    \label{fig:placeholder4}
+    \end{figure}
+    
+    In questo grafico osserviamo:
+    \begin{itemize}
+        \item Da 1\% a 30\% \`e la fascia pi\`u stabile, perch\'e \`e numerosa e con il tasso di default pi\`u basso in assoluto
+        \item dal 71\% in su invece abbiamo un tasso di default pi\`u importante, per cui circa 9 mila soggetti sono ad alto rischio e vivono una situazione di stress finanziario
+        \item anche coloro che sono inattivi, sono per\`o un grande rischio perch\'e sono clienti dormienti.
+    \end{itemize}
+\end{enumerate}
+
+\subsection{Tecniche predittive}
+\subsubsection{Regressione logistica}
+    Osservando la distribuzione della variabile target rispetto alla variabile\\ \textit{UTILIZATION\_RATIO} si nota visivamente una maggiore concentrazione di casi di default ($Y$=1) all'aumentare del livello di saturazione del tetto di credito, suggerendo una relazione positiva tra l'elevato utilizzo del credito e l'insolvenza. 
+    Il coefficiente \`e infatti positivo ($0.005$) sottolineando la relazione tra saturazione del credito e rischio di default. L'intercetta \`e invece negativa ($-1.48$) questo perch\'e quando un cliente non utilizza il suo credito ha comunque probabilit\`a di default, un dato che si osserva gi\`a nell'analisi bivariata.\\
+
+    Utilizzando tre soglie differenti: 0.5, 0.3, 0.2 identifichiamo la soglia prudenziale oltre la quale il modello inizia a classificare come a rischio di default i soggetti. In questo caso la soglia prudenziale \`e di 0.2, cio\`e tutti i clienti che superano l'utilizzo del credito del 30\% sono classificati come a rischio. Unicamente il cliente con un utilizzo del 10\% viene considerato completamente solvibile. 
+        \begin{table}[H]
+        \centering
+        \begin{tabular}{cccccc}
+        \toprule
+        \textbf{Indice} & \textbf{UT.\_RATIO} & \textbf{prob. default} & \textbf{soglia\_05} & \textbf{soglia\_03} & \textbf{soglia\_02} \\
+        \midrule
+        0 & 10  & 0.1933 & 0 & 0 & 0 \\
+        1 & 30  & 0.2091 & 0 & 0 & 1 \\
+        2 & 70  & 0.2433 & 0 & 0 & 1 \\
+        3 & 95  & 0.2666 & 0 & 0 & 1 \\
+        4 & 120 & 0.2912 & 0 & 0 & 1 \\
+        \bottomrule
+        \end{tabular}
+        \caption{Predizioni di default al variare della soglia di classificazione}
+        \label{tab:predizioni_soglia}
+        \end{table}
+
+\subsubsection{k-Nearest Neighbour}
+    Con questo modello \`e necessaria la standardizzazione perch\'e basandosi sulle distanze, variabili espresse in valuta reale come $LIMIT\_BAL$, avrebbero dominato la misura di distanza rispetto a features come $SEX$ o $MARRIAGE$. \\
+    Per individuare la configurazione migliore del k-NN, ne abbiamo testati diversi. 
+    \begin{itemize}
+        \item k troppo bassi (\textit{k = 1, 3}) il modello \`e troppo sensibile al rumore dei dati tenendo un'accuracy bassa (con k = 1, accuracy = 73\%)
+        \item scelta ottimale (\textit{k = 21}) allargando il raggio di K di molto, le predizioni sono pi\`u stabili e l'accuracy raggiunge un valore di 81\%
+        \item k troppo alti (\textit{k = 51}) oltre i 21 le prestazioni iniziano a calare, poich\'e il modello tende ad appiattirsi sulla classe maggioritaria (clienti solvibili)
+    \end{itemize}
+        \begin{figure}[H]
+        \centering
+        \includegraphics[width=1.1\linewidth]{k_NN.png}
+        \caption{Effetto parametro k}
+        \label{fig:placeholder5}
+        \end{figure}
+
+\subsubsection{Random Forest}
+    A differenza dei modelli precedenti, l'addestramento \`e  stato eseguito sui dati originali non scalati, sfruttando la naturale insensibilit\`a degli alberi alle trasformazioni monotone delle features. \`E stata addestrata una random forest composta da 200 alberi decisionali.\\
+    La classifica dell'importanza delle variabili, individua come predittori chiave: lo storico dei pagamenti recenti $PAY\_1$, l'et\`a $AGE$ e l'indice di utilizzo del credito $UTILIZATION\_RATIO$. Utilizzando una variabile $random\_noise$, che si introduce come feature casuale avente nessuna correlazione con il nostro dataset, ci nota come solo $PAY\_1$ \`e  effettivamente importante come predittore di rischio, siccome come tutto ci\`o che sta al di sotto della variabile casuale non sia cos\'i rilevante. 
+
+    \begin{figure}[H]
+    \centering
+    \includegraphics[width=1.1\linewidth]{feauture_importance2.png}
+    \caption{Feature importance con variabile casuale}
+    \label{fig:placeholder6}
+    \end{figure}
+
+\subsection{Performance dei modelli}
+    Tutti e tre i modelli mostrano un'accuracy quasi identica. Questo dato conferma come l'accuracy sia una metrica ingannevole quando si \`e in presenza di un dataset sbilanciato.\\
+    La regressione logistica ottiene la precision pi\`u alta, in quanto identifica il default correttamente 2 volte su 3. Ha tuttavia una recall pi\`u bassa (0.33) lasciandosi quindi sfuggire ben il 67\% dei clienti a rischio. \`E meglio avere pi\`u falsi positivi piuttosto che sottostimare il rischio di default.\\
+    Random forest mostra la capacit\`a di intercettazione migliore con una recall del 0.37 ma ha una precision leggermente inferiore agli altri modelli.\\
+    Il modello k-NN si colloca esattamente a met\`a tra i due con una precision del 0.65 e una recall di 0.35.\\
+        \begin{table}[H]
+        \centering
+        \begin{tabular}{lccc}
+        \toprule
+        \textbf{Metrica} & \textbf{Regressione Logistica} & \textbf{k-NN (k=21)} & \textbf{Random Forest} \\
+        \midrule
+        Accuracy   & 0.82 & 0.81 & 0.81 \\
+        Precision  & 0.67 & 0.65 & 0.63 \\
+        Recall     & 0.33 & 0.35 & 0.37 \\
+        F1-score   & 0.44 & 0.45 & 0.46 \\
+        \bottomrule
+        \end{tabular}
+        \caption{Confronto delle metriche di performance tra i modelli predittivi}
+        \label{tab:confronto_modelli}
+        \end{table}
+
+
+
+\section{Discussione}
+    L'analisi evidenzia come lo storico dei pagamenti $PAY\_1$ e l'indice di saturazione del credito $UTILIZATION\_RATIO$ siano predittori efficaci per stimare il rischio di default. L'introduzione di quest'ultimo indice riassuntivo \`e  risultata una scelta vincente per descrivere il comportamento dei soggetti osservati.\\
+    Il principale vincolo metodologico \`e  rappresentato dallo sbilanciamento del dataset (circa il 22\% di casi default). In questo contesto, l'accuracy risulta una metrica fuorviante, mentre la priorit\`a per la banca \`e  massimizzare la recall per ridurre i falsi negativi. L'adozione della random forest e il ricalibro della soglia decisionale si confermano strategie necessarie per intercettare una quota maggiore di clienti a rischio.\\
+    Infine, il processo ha evidenziato l'importanza della pulizia dei dati per correggere le incongruenze nella documentazione originale. Nonostante la natura semplificata dello studio, i risultati dimostrano l'efficacia del machine learning nel supportare decisioni operative di gestione del rischio del credito. 
+
+\section{Conclusione}
+    In sintesi, questo lavoro ha analizzato i dati demografici e finanziari di 30.000 clienti bancari, applicando tre algoritmi per la classificazione per prevedere il rischio di default sul pagamento del mese successivo.\\
+    Alla domanda di ricerca che ci siamo posti inizialmente troviamo un riscontro positivo. \`E possibile prevedere il default analizzando il profilo del cliente. Risultano chiave in particolare lo storico dei pagamenti e l'indice di utilizzo del credito. Tra i modelli, il random forest \`e  risultato la scelta migliore per prevedere il maggior numero di clienti a rischio, limitando i falsi negativi.\\
+    Per migliorare ulteriormente le prestazioni in futuro, si potrebbe utilizzare un campione pi\`u bilanciato e aggiungere informazioni rispetto alla situazione finanziaria del cliente e sperimentare con altri algoritmi.
+
+\bibliographystyle{plain}
+\nocite{*}
+\bibliography{references}
+
+\end{document}
